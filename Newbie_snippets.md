@@ -5,7 +5,8 @@ I found in my first couple of weeks of getting into Kivy that There's alot of ra
 and far less out there in the actual kv language. So this document is highlighting (in perhaps a clearer newbie manner) some of the things that 
 took me ages to find or get my head around. 
 
-I'm a newbie to Kivy also, therefore this is one newbie helping another
+I'm a newbie to Kivy also, therefore this is one newbie helping another. I also find i learn more if i try to teach. Therfore writing it down 
+in this manner regardless if anyone reads it helps me to also learn and remember :). If you find somethign that needs tweaked feel free to let me know
 
 ## The .kv file
 
@@ -30,7 +31,7 @@ Let's take a look at an example below:
     theme_text_color: "Custom"
     text_color: 0, 0, 1, 1
 ```
-\<Bluelabel@MDLabel>: is the dynamic class inheritance [https://kivy.org/doc/stable/api-kivy.lang.html#dynamic-classes](Kivys documentation on Dynamic classes)
+\<Bluelabel@MDLabel>: is the dynamic class inheritance (https://kivy.org/doc/stable/api-kivy.lang.html#dynamic-classes)[Kivys documentation on Dynamic classes]
   - The <BlueLabel part can be what ever name you want to call it, in this case its for creating a blue label :)
   - The @ is required so Kivy knows its going to be a dynamic class
   - MDLabel> is what widget your basing it off, this could be Button>, MDButton> or any other widget name
