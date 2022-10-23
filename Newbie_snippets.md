@@ -1,5 +1,5 @@
 ## Intro - 
-###(file Written by Lazza)
+(file Written by Lazza)
 
 I found in my first couple of weeks of getting into Kivy that There's alot of random Kivy examples out there that are written mainly in python 
 and far less out there in the actual kv language. So this document is highlighting (in perhaps a clearer newbie manner) some of the things that 
@@ -30,7 +30,7 @@ Let's take a look at an example below:
     theme_text_color: "Custom"
     text_color: 0, 0, 1, 1
 ```
-\<Bluelabel@MDLabel>: is the dynamic class inheritance (Kivy's documentation on Dynamic classes)[https://kivy.org/doc/stable/api-kivy.lang.html#dynamic-classes]
+\<Bluelabel@MDLabel>: is the dynamic class inheritance [https://kivy.org/doc/stable/api-kivy.lang.html#dynamic-classes](Kivys documentation on Dynamic classes)
   - The <BlueLabel part can be what ever name you want to call it, in this case its for creating a blue label :)
   - The @ is required so Kivy knows its going to be a dynamic class
   - MDLabel> is what widget your basing it off, this could be Button>, MDButton> or any other widget name
