@@ -19,14 +19,13 @@ than the actual kv language which is weird. Also their documentation I find ofte
 
 # Table of Contents
 
-- [The KV file](#the-kv-file)
-- [Dynamic Classes](#dynamic-classes)
-- [Drop Down example](#dropdown-example)
-- [Drop down Menu](#drop-down-menu)
-- [Size hint explanantion](#size-hint-explanation)
+- [The KV file](#The-kv-file)
+- [Dynamic Classes](#Adding-What-Kivy-call-a-Dynamic-Class)
+- [Drop Down example](#Dropdown-example)
+- [Drop down Menu](#Drop-down-menu)
+- [Size hint explanantion](#Explanation-from-stackexchange-about-Size-hint-that-i-found-helpful)
 
-# the-kv-file
-## The .kv file
+# The kv file
 
 Kivy uses a mixture of Python to run the "logic side" of a android app, and the .kv file to do the majority of the visual stuff 
 (IE: the GUI - the stuff you visually see on the screen). The kv file so far to me appears to be a nice quick way to structure your GUI.
@@ -36,8 +35,7 @@ aiming to show more kv examples than python. Give it a go, I reckon you'll grow 
 
 
 
-# dynamic-classes
-## Adding What Kivy call a "Dynamic Class"
+# Adding What Kivy call a Dynamic Class
 A dynamic class is like a CSS file. You can make your own dynamic class up so that you don't have to repeat the same thing in your code over and over again.
 As a bonus if you need to change the font size of all your labels for example, you can change just the dynamic classes font_size: and it will effect all 
 labels in your kv file that use that dynamic class.
@@ -98,8 +96,8 @@ MDLabel:
     text: "I'm a blue label"
  ```
 
-# dropdown-example
-## Example of a dropdown 
+# Dropdown example
+
 ```
 Button:
     id: click_me_button
@@ -127,8 +125,8 @@ Button:
     on_release: resident_drop_content.select('Visa Holder')
 ```
 
-# Drop-down-menu
-## Add a drop down menu
+# Drop down menu
+
 
 Did you want to add a drop menu to your app?
 
@@ -180,8 +178,8 @@ Button:
     on_release: root.yes_no_responce()
 ```
 
-# size-hint-explanation
-## Explanation from stackexchange about Size hint that i found helpful
+
+# Explanation from stackexchange about Size hint that i found helpful
 
 In kivy most of widgets have an argument called size_hint which as the name suggests sets size of widget according
 to screen size. It takes value from 0 to 1. A value of 0.5 basically means half of screen. 
