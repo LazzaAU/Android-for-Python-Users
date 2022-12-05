@@ -4,7 +4,7 @@ Android for Python Users
 
 *An unofficial Users' Guide*
 
-Revised 2022-10-19
+Revised 2022-10-26
 
 # Table of Contents
 
@@ -47,6 +47,7 @@ Revised 2022-10-19
     + [package.domain](#packagedomain)
     + [requirements](#requirements)
       - [requirements basics](#requirements-basics)
+      - [Version pinning](#version-pinning)
       - [Find the Dependencies](#find-the-dependencies)
       - [Kivy Widget Dependencies](#kivy-widget-dependencies)
       - [Requirements Examples](#requirements-examples)
@@ -120,6 +121,12 @@ Revised 2022-10-19
   * [Requested API target 27 is not available](#requested-api-target-27-is-not-available)
   * [BUILD FAILURE: No main.py(o)](#build-failure-no-mainpyo)
   * [/usr/bin/gzip: 1: ELF : not found](#usrbingzip-1-elf--not-found)
+  * [SSL: CERTIFICATE_VERIFY_FAILED](#ssl-certificate_verify_failed)
+  * [gradlew failed!](#gradlew-failed)
+  * [android:exported](#androidexported)
+  * [null pointer dereference](#null-pointer-dereference)
+  * [No module named 'android'](#no-module-named-android)
+  * [Hunk #1 FAILED](#hunk-1-failed)
 
 # Introduction
 
@@ -407,7 +414,7 @@ There are two Kivy examples [Kivy Service Osc](https://github.com/tshirtman/kivy
 
 ## Specifying a Service 
 
-We assign the service a name, and associate this with script file name in `buildozer.spec`. *The service name must be a valid Java class name.* In the sample below `the_service.py` is the name of the script, and `Worker` is the name we give the service.
+We assign the service a name, and associate this with script file name in `buildozer.spec`. *The service name must be a valid Java class name. The first character and no other character must be upper case.* In the sample below `the_service.py` is the name of the script, and `Worker` is the name we give the service.
 
 ```
 # (list) List of service to declare
@@ -446,7 +453,6 @@ As explained in the next section this does not work with a sticky foreground ser
 ```
 
 When debugging, the default Python filter excludes any print statments in the service. To see output from the service use the `adb logcat -s` option, for example `adb logcat -s Worker`.
-
 
 ## Service Lifetime
 
@@ -493,9 +499,9 @@ Because an app may stop and restart while a sticky foreground service is running
 
 ## Service Notifications
 
-For build api < 33 a foreground service always places a notification icon in the task bar. Depending on version there may be a few second delay in the appearance of the icon, this delay is an Android 'feature' and does not indicate that the foreground service has not started.
+For android.api < 33 a foreground service always places a notification icon in the task bar. Depending on Android device version there may be an up to 10 second delay in the appearance of the icon, this delay is an Android 'feature' and does not indicate that the foreground service has not started.
 
-For build api >= 33 a foreground service only places a notification icon in the task bar if POST_NOTIFICATIONS permission is requested and granted.
+For android.api >= 33 a foreground service only places a notification icon in the task bar if POST_NOTIFICATIONS permission is specified in buildozer.spec and as a run time permission. If you do not do this, app behavior will vary with device version. See the [Android documentation](https://developer.android.com/develop/ui/views/notifications/notification-permission) and [App Permissions](#app-permissions). No notification does not mean the service is not started.
 
 The default icon displayed in the task bar is derived from the app icon, and for the Kivy icon it is a white circle. There is no api that will change this, or example of how to change this.  
 
@@ -625,7 +631,13 @@ This is the list of pip packages (and possibly versions) that your app imports f
 
 Do not add Python system modules, only packages you might install with pip3 on the desktop. 
 
-There are some pip3 packages that are added automatically, no need to put these in requirements: `libffi, openssl, sqlite3, setuptools, six, pyjnius, android, certifi`.
+There are some pip3 packages that are added automatically, no need to put these in requirements: `libffi, openssl, sqlite3, setuptools, six, pyjnius, android`.
+
+#### Version pinning
+
+If a requirement is a package that requires a [recipe](https://github.com/kivy/python-for-android/tree/develop/pythonforandroid/recipes), version pinning may result in a build error. Because a compile recipe is created for the version specified in the recipe, and may not apply to other versions if the compile model has changed.
+
+Your options are to use the default version, or [locally modify the recipe](#appendix-c--locally-modifying-a-recipe).
 
 #### Find the Dependencies
 
@@ -786,11 +798,13 @@ It is possible to [debug using an emulator](#appendix-b--using-an-emulator) but 
 
 On the desktop if you start a Kivy app from a desktop icon, the app is slower to start than say from an IDE. This is because from the icon Python has to start first, on Android the same delay due to Python starting exists. On Android the splash screen is used to distract from this delay; the splash screen is a work around, not a cause of the delay.
 
-If your app is *unusually slow* to start, it is because it is doing too much work in the `build()` and `on_start()` methods. A common symptom of this is is a black screen *after* the splash screen has closed but before the app displays. This is your code, you can change this behavior. Common causes are monolithic `kv`, compute intensive Python in the above methods, or I/O intensive Python in the above methods. 
+If your app is *unusually slow* to start, it is because it is doing too much work in the `build()` and `on_start()` methods. A common symptom of this is is a black screen *after* the splash screen has closed but before the app displays. This is your code, you can change this behavior. Common causes are monolithic `kv`, compute intensive Python in the above methods, I/O intensive Python in the above methods, or too many `autoclass()` statements.
 
 A solution for monolithic `kv` is to have a `kv` *file* for each screen and to instantiate the screen manager in Python. At `build()` only the first screen is added to the screen manager. Other screens are built and added after `on_start()`, either on demand or on some schedule. This is known as lazy loading.
 
 Another common solution is to schedule any initial Python compute or I/O intensive tasks to occur after `on_start()`, either on demand or on some schedule.
+
+Autoclass is expensive in startup time, if you have 10 or more autoclass statements this may be significant on older devices. The solution is to throw out most of that clever Pyjnius code you spent so long perfecting, and move the code to a Java class in a .java file. Then reference your Java with one or two autoclass in the usual way. Include your Java in the build with Buildozer's `android.add_src`.
 
 There may be other causes, its your code.
 
@@ -910,13 +924,17 @@ from android import mActivity
     mActivity.getContentResolver() 
 ```
 
-It is also possible to write Java class implementations in Python using `PythonJavaClass`, [RTFM](https://github.com/kivy/pyjnius/blob/master/docs/source/api.rst#java-class-implementation-in-python) and [look at some examples](https://github.com/Android-for-Python/CameraXF-Example/blob/main/cameraxf/listeners.py). You will need to understand [Java signature format](https://github.com/kivy/pyjnius/blob/master/docs/source/api.rst#java-signature-format).
+Add your own Java to the package using the Buildozer options `android.add_src` and `android.add_jars`, see buildozer.spec.
+
+Add AndroidX Java packages (or other Maven packages) using the Buildozer option `android.gradle_dependencies`, see buildozer.spec and [Maven AndroidX Group](https://mvnrepository.com/artifact/androidx).
+
+More challenging, it is also possible to write Java class implementations in Python using `PythonJavaClass`, [RTFM](https://github.com/kivy/pyjnius/blob/master/docs/source/api.rst#java-class-implementation-in-python) and [look at some examples](https://github.com/Android-for-Python/CameraXF-Example/blob/main/cameraxf/listeners.py). You will need to understand [Java signature format](https://github.com/kivy/pyjnius/blob/master/docs/source/api.rst#java-signature-format). This implementation is only visible in Python, Java classes cannot see it (though they can see the Java defined interface).
 
 Note: some documentation examples are obsolete. If you see '.renpy.' as a sub field in an autoclass argument replace it with '.kivy.'.
 
 ### Pyjnius Performance
 
-The `autoclass()` method add significant latency during the app start. If the app contains more than perhaps a dozen `autoclass()` calls you will probably notice the extra app startup time.
+The `autoclass()` statement adds significant latency during the app start. If the app contains more than perhaps a dozen `autoclass()` calls you will probably notice the extra app startup time.
 
 The way to address this is to create a Java file that references the Java classes that were referenced with autoclass(). Then reference your Java class with `autoclass()`. A Java file is included in the project using Buildozer's `android.add_src`. If your Java file is located at `<project>/src/org/me/myproject/my.java` then use `android.add_src = src` .
 
@@ -1397,6 +1415,28 @@ p4a.branch = some_branch
 
 # Appendix H : Cryptic Error Messages
 
+  * [No module named 'msvcrt'](#no-module-named-msvcrt)
+  * [Aidl not found](#aidl-not-found)
+  * [Sdkmanager is not installed](#sdkmanager-is-not-installed)
+  * [64-bit instead of 32-bit](#64-bit-instead-of-32-bit)
+  * [EM_X86_64 instead of EM_AARCH64](#em_x86_64-instead-of-em_aarch64)
+  * [No module named '_Socket'](#no-module-named-_socket)
+  * [weakly-referenced object](#weakly-referenced-object)
+  * [OpenCV requires Android SDK Tools](#opencv-requires-android-sdk-tools)
+  * [No such file or directory: 'ffmpeg'](#no-such-file-or-directory-ffmpeg)
+  * [Unsupported class file major version 62](#unsupported-class-file-major-version-62)
+  * [Permission denied: '/storage/emulated/0/...'](#permission-denied-storageemulated0)
+  * [ModuleNotFoundError: No module named 'PIL'](#modulenotfounderror-no-module-named-pil)
+  * [Requested API target 27 is not available](#requested-api-target-27-is-not-available)
+  * [BUILD FAILURE: No main.py(o)](#build-failure-no-mainpyo)
+  * [/usr/bin/gzip: 1: ELF : not found](#usrbingzip-1-elf--not-found)
+  * [SSL: CERTIFICATE_VERIFY_FAILED](#ssl-certificate_verify_failed)
+  * [gradlew failed!](#gradlew-failed)
+  * [android:exported](#androidexported)
+  * [null pointer dereference](#null-pointer-dereference)
+  * [No module named 'android'](#no-module-named-android)
+  * [Hunk #1 FAILED](#hunk-1-failed)
+
 ## No module named 'msvcrt'
 
 `No module named 'msvcrt'` and `No module named '_posixsubprocess'`
@@ -1492,7 +1532,7 @@ There is no ffmpeg executable. You have to build it for ARM. The recipe builds a
 
 `[DEBUG]:          General error during semantic analysis: Unsupported class file major version 62 `
 
-Version 62 Is Java 18. Error is probably due to an added aar built with Java 18. This is not going to work.
+Version 62 Is Java 18. Error is probably due to an added jar built with Java 18. This is not going to work.
 
 The Java version used by p4a is the version required for the gradle version used. For p4a master, this can be any version between openJDK-11 and 17, the install instructions suggest 17.
 
@@ -1555,5 +1595,68 @@ Check the current WSL version at the Windows Command prompt with `wsl -l -v`.
 
 The fix is to upgrade to WSL 2.
 
+## SSL: CERTIFICATE_VERIFY_FAILED
 
+`[SSL: CERTIFICATE_VERIFY_FAILED] certificate verify failed: unable to get local issuer certificate`
 
+Add `certifi` to [requirements](#requirements).
+
+## gradlew failed!
+
+`[WARNING]: ERROR: whatever/.buildozer/android/platform/build-arm64-v8a_armeabi-v7a/dists/appname/gradlew failed!`
+
+The Gradle error message is further up the log file. Search upwards for 'BUILD FAILED' or 'what went wrong' (without the ''), the error messages will be in this general area.
+
+Generally Gradle errors are due to an incorrect Java version, Java usage errors, missing Java files, a Java jar [built with a newer](#unsupported-class-file-major-version-62) version of Java, missing Android Java packages, or misconfigured Android resource or configuration files. Gradle does not analyze Python errors.
+
+## android:exported
+
+`[DEBUG]: android:exported needs to be explicitly specified for element <whatever>`
+
+This is a Gradle error message, it is about using an obsolete version of the Android package named in the message.
+
+You can research Android package versions at [Maven](https://mvnrepository.com), and you will need a version that is compatible which whatever Python code you are using.
+
+## null pointer dereference
+
+`DEBUG : Cause: null pointer dereference`
+
+This message is not from Python, it is from the Android run time system. Some Android api call has been corrupted. This is a memory corruption issue it may exhibit differently (or not at all) on different devices. Probably due to a misuse of Pyjnius, Plyer, or android_permissions.
+
+**ALERT** There is an [issue with KivyMD 1.1.1](https://github.com/kivymd/KivyMD/issues/1393) that can cause this issue, this issue does not appear to exist in KivyMD 1.0.2 .
+
+Memory issues are incredibly hard to debug, the error may or may not be local to the symptom. So removing code from the app may just move the issue, not remove the issue. That doesn't mean don't cut your app down, it means it is not sufficent to see your app work - you must also understand which code of yours broke the app.
+
+Some possibilities:
+
+ - A corrupted build [try an appclean](#changing-buildozerspec). This probably it not the issue but if it is you'll save a lot of work.
+
+ - Pyjnius code that does not take into account the use of two garbage collectors, [modify your code](#pyjnius-memory-management).
+
+ - Plyer or android_permissions calls that do not occur in the 'App functions' block of the [Kivy Lifecycle](https://kivy.org/doc/stable/guide/basic.html#kivy-app-life-cycle). Modify your code.
+
+ - It is also possible that an [impure Python package that has no recipe](#wheels) could generate this error; though [other error messages](#em_x86_64-instead-of-em_aarch64) [or](#64-bit-instead-of-32-bit) are more likely.
+
+## No module named 'android'
+
+`ModuleNotFoundError: No module named 'android'`
+
+The android package is only available on Android. This error occurs on a desktop, because there is no Android api implementation. The android package is only available on Android, and is installed by p4a.
+
+Perhaps you want platform specific code:
+
+```python
+from kivy.utils import platform
+if platform == 'android':
+    import android
+```
+
+## Hunk #1 FAILED
+
+```
+STDOUT:
+patching file somefile
+Hunk #1 FAILED
+```
+
+Usually due to [version pinning](#version-pinning) a compile recipe, the error is due to pinning version that is incompatible with the compile recipe. Remove the version pin, or locally modify the recipy. 
